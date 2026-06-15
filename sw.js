@@ -1,4 +1,4 @@
-var CACHE_NAME = 'moonblast-v1';
+var CACHE_NAME = 'moonblast-v2';
 var CACHE_URLS = [
   '.',
   'index.html',
@@ -13,6 +13,12 @@ self.addEventListener('install', function(event) {
     })
   );
   self.skipWaiting();
+});
+
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', function(event) {
@@ -32,9 +38,17 @@ self.addEventListener('activate', function(event) {
 
 self.addEventListener('fetch', function(event) {
   event.respondWith(
-    caches.match(event.request).then(function(response) {
-      return response || fetch(event.request).catch(function() {
-        return caches.match('.');
+    fetch(event.request).then(function(response) {
+      var clone = response.clone();
+      caches.open(CACHE_NAME).then(function(cache) {
+        if (event.request.method === 'GET' && event.request.url.indexOf('http') === 0) {
+          cache.put(event.request, clone);
+        }
+      });
+      return response;
+    }).catch(function() {
+      return caches.match(event.request).then(function(cached) {
+        return cached || caches.match('.');
       });
     })
   );
