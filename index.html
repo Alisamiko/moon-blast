@@ -193,7 +193,7 @@ body{background:linear-gradient(180deg,#05020f 0%,#0d0620 10%,#1a0a3e 25%,#2d1b5
 #g2048-size-panel{position:fixed;bottom:48px;left:50%;transform:translateX(-50%);width:100%;max-width:500px;z-index:490;display:none;align-items:center;justify-content:center;gap:10px;padding:6px 14px;background:rgba(10,5,25,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,0.06);box-sizing:border-box}
 #game-2048.active~#g2048-size-panel{display:flex}
 #game-oneline.active~#ol-size-panel{display:flex}
-#q-size-panel{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);width:100%;max-width:500px;z-index:490;display:none;align-items:center;justify-content:center;gap:6px;padding:6px 14px;background:rgba(10,5,25,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,0.06);box-sizing:border-box}
+#q-size-panel{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);width:100%;max-width:500px;z-index:490;display:none;align-items:center;justify-content:center;gap:10px;padding:6px 14px;background:rgba(10,5,25,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,0.06);box-sizing:border-box}
 #game-queens.active~#q-size-panel{display:flex}
 .ol-size-label{color:#c9b1ff;font-size:0.75em}
 .ol-size-btn{padding:4px 16px;border:none;border-radius:8px;background:rgba(255,255,255,0.06);color:#f0e6ff;font-size:0.85em;font-weight:bold;cursor:pointer;transition:all 0.2s;touch-action:manipulation}
@@ -2310,19 +2310,19 @@ document.getElementById('g2048-size-panel').addEventListener('click',function(e)
 });
 
 /* === QUEENS MASTER === */
-var qLevel=1,qSize=5,qQueens=[],qTotalQueens=0,qPlaced=0,qRegions=[],qRegionCells=[],qManualSize=0,qMarks=[],clickData=null,processingTouch=false,qLives=5,qTouchInit=false,qSolution=[],qTouch={active:false,mode:0,startX:0,startY:0,lastR:-1,lastC:-1,swiped:false};
+var qLevel=1,qSize=5,qQueens=[],qTotalQueens=0,qPlaced=0,qRegions=[],qRegionCells=[],qManualSize=0,qMarks=[],clickData=null,processingTouch=false,qLives=5,qTouchInit=false,qSolution=[],qTouch={active:false,mode:0,startX:0,startY:0,startR:-1,startC:-1,lastR:-1,lastC:-1,swiped:false},qMouse={active:false,mode:0,startX:0,startY:0,startR:-1,startC:-1,lastR:-1,lastC:-1,swiped:false,suppressClick:false};
 var queenRegionColors=[
-  {bg:'rgba(180,130,255,0.35)',bd:'#8b5cf6'},{bg:'rgba(130,180,255,0.35)',bd:'#3b82f6'},
-  {bg:'rgba(255,130,200,0.35)',bd:'#ec4899'},{bg:'rgba(160,100,240,0.35)',bd:'#7c3aed'},
-  {bg:'rgba(100,180,255,0.35)',bd:'#2563eb'},{bg:'rgba(240,130,180,0.35)',bd:'#db2777'},
-  {bg:'rgba(210,150,255,0.35)',bd:'#a855f7'},{bg:'rgba(150,200,255,0.35)',bd:'#60a5fa'},
-  {bg:'rgba(255,150,220,0.35)',bd:'#f472b6'},{bg:'rgba(140,120,230,0.35)',bd:'#6d28d9'}
+  {bg:'rgba(210,170,255,0.58)',bd:'#d2aaff'},{bg:'rgba(170,210,255,0.58)',bd:'#aad2ff'},
+  {bg:'rgba(255,180,215,0.58)',bd:'#ffb4d7'},{bg:'rgba(255,215,170,0.58)',bd:'#ffd7aa'},
+  {bg:'rgba(170,230,255,0.58)',bd:'#aae6ff'},{bg:'rgba(225,180,255,0.58)',bd:'#e1b4ff'},
+  {bg:'rgba(255,170,200,0.58)',bd:'#ffaac8'},{bg:'rgba(170,235,210,0.58)',bd:'#aaebd2'},
+  {bg:'rgba(255,230,180,0.58)',bd:'#ffe6b4'},{bg:'rgba(195,185,255,0.58)',bd:'#c3b9ff'}
 ];
 var Q_SIZES=[5,5,5,5,6,6,6,6,7,7,7,7,8,8,8,8,5,6,7,8,5,6,7,8];
 try{qLevel=parseInt(localStorage.getItem('bb_q_level')||'1',10)}catch(e){}
 try{qManualSize=parseInt(localStorage.getItem('bb_q_size')||'0',10)}catch(e){}
 
-function initQueens(){initQTouch();buildQueens()}
+function initQueens(){initQTouch();initQMouse();buildQueens()}
 
 function buildQueens(){
   qSize=Q_SIZES[(qLevel-1)%Q_SIZES.length]||5;
@@ -2483,18 +2483,21 @@ function handleQTouchStart(e){
   e.preventDefault();processingTouch=true;
   var r=parseInt(cell.getAttribute('data-r'),10),c=parseInt(cell.getAttribute('data-c'),10),rid=parseInt(cell.getAttribute('data-region'),10);
   highlightRegion(rid);
-  qTouch.active=true;qTouch.startX=t.clientX;qTouch.startY=t.clientY;qTouch.lastR=r;qTouch.lastC=c;qTouch.swiped=false;
+  qTouch.active=true;qTouch.startX=t.clientX;qTouch.startY=t.clientY;qTouch.startR=r;qTouch.startC=c;qTouch.lastR=r;qTouch.lastC=c;qTouch.swiped=false;
   var hq=qQueens.some(function(q){return q[0]===r&&q[1]===c});
   if(hq)qTouch.mode=0;
   else if(qMarks[r]&&qMarks[r][c])qTouch.mode=-1;
   else qTouch.mode=1;
-  if(qTouch.mode!==0){if(!qMarks[r])qMarks[r]=[];qMarks[r][c]=(qTouch.mode===1);toggleCellClass(r,c,'marked',qTouch.mode===1)}
 }
 function handleQTouchMove(e){
   if(!qTouch.active)return;
   e.preventDefault();
   var t=e.changedTouches[0];
-  if(Math.sqrt(Math.pow(t.clientX-qTouch.startX,2)+Math.pow(t.clientY-qTouch.startY,2))>5)qTouch.swiped=true;
+  var dist=Math.sqrt(Math.pow(t.clientX-qTouch.startX,2)+Math.pow(t.clientY-qTouch.startY,2));
+  if(dist>5&&!qTouch.swiped){
+    qTouch.swiped=true;
+    if(qTouch.mode!==0){var sr=qTouch.startR,sc=qTouch.startC;var hqs=qQueens.some(function(q){return q[0]===sr&&q[1]===sc});if(!hqs){if(!qMarks[sr])qMarks[sr]=[];qMarks[sr][sc]=(qTouch.mode===1);toggleCellClass(sr,sc,'marked',qTouch.mode===1)}}
+  }
   var cell=document.elementFromPoint(t.clientX,t.clientY);
   if(!cell||!cell.classList.contains('q-cell'))return;
   var r=parseInt(cell.getAttribute('data-r'),10),c=parseInt(cell.getAttribute('data-c'),10);
@@ -2520,6 +2523,46 @@ function initQTouch(){
   board.addEventListener('touchmove',handleQTouchMove,{passive:false});
   board.addEventListener('touchend',handleQTouchEnd,{passive:false});
 }
+var qMouseInit=false;
+function initQMouse(){
+  if(qMouseInit)return;
+  qMouseInit=true;
+  var board=document.getElementById('queens-board');
+  board.addEventListener('mousedown',handleQMouseDown);
+  document.addEventListener('mousemove',handleQMouseMove);
+  document.addEventListener('mouseup',handleQMouseUp);
+}
+function handleQMouseDown(e){
+  var cell=document.elementFromPoint(e.clientX,e.clientY);
+  if(!cell||!cell.classList.contains('q-cell')||e.button!==0)return;
+  var r=parseInt(cell.getAttribute('data-r'),10),c=parseInt(cell.getAttribute('data-c'),10),rid=parseInt(cell.getAttribute('data-region'),10);
+  highlightRegion(rid);
+  qMouse.active=true;qMouse.startX=e.clientX;qMouse.startY=e.clientY;qMouse.startR=r;qMouse.startC=c;qMouse.lastR=r;qMouse.lastC=c;qMouse.swiped=false;qMouse.suppressClick=false;
+  var hq=qQueens.some(function(q){return q[0]===r&&q[1]===c});
+  if(hq)qMouse.mode=0;
+  else if(qMarks[r]&&qMarks[r][c])qMouse.mode=-1;
+  else qMouse.mode=1;
+}
+function handleQMouseMove(e){
+  if(!qMouse.active)return;
+  var dist=Math.sqrt(Math.pow(e.clientX-qMouse.startX,2)+Math.pow(e.clientY-qMouse.startY,2));
+  if(dist>5&&!qMouse.swiped){
+    qMouse.swiped=true;
+    if(qMouse.mode!==0){var sr=qMouse.startR,sc=qMouse.startC;var hqs=qQueens.some(function(q){return q[0]===sr&&q[1]===sc});if(!hqs){if(!qMarks[sr])qMarks[sr]=[];qMarks[sr][sc]=(qMouse.mode===1);toggleCellClass(sr,sc,'marked',qMouse.mode===1)}}
+  }
+  var cell=document.elementFromPoint(e.clientX,e.clientY);
+  if(!cell||!cell.classList.contains('q-cell'))return;
+  var r=parseInt(cell.getAttribute('data-r'),10),c=parseInt(cell.getAttribute('data-c'),10);
+  if(r===qMouse.lastR&&c===qMouse.lastC)return;
+  clearHighlight();var rid=parseInt(cell.getAttribute('data-region'),10);highlightRegion(rid);
+  qMouse.lastR=r;qMouse.lastC=c;
+  if(qMouse.mode!==0){var hq=qQueens.some(function(q){return q[0]===r&&q[1]===c});if(!hq){if(!qMarks[r])qMarks[r]=[];qMarks[r][c]=(qMouse.mode===1);toggleCellClass(r,c,'marked',qMouse.mode===1)}}
+}
+function handleQMouseUp(e){
+  if(!qMouse.active||e.button!==0)return;
+  qMouse.active=false;clearHighlight();
+  if(qMouse.swiped){qMouse.suppressClick=true;setTimeout(function(){qMouse.suppressClick=false},100)}
+}
 function renderQueens(){
   var board=document.getElementById('queens-board');
   board.style.gridTemplateColumns='repeat('+qSize+',1fr)';board.innerHTML='';
@@ -2529,17 +2572,17 @@ function renderQueens(){
     cell.setAttribute('data-region',rid);cell.setAttribute('data-r',r);cell.setAttribute('data-c',c);
     cell.style.backgroundColor=col.bg;
     var bdr=getCellBorders(r,c,qRegions,qSize);
-    cell.style.borderTop=bdr.t?'1.5px solid '+col.bd:'0';
-    cell.style.borderBottom=bdr.b?'1.5px solid '+col.bd:'0';
-    cell.style.borderLeft=bdr.l?'1.5px solid '+col.bd:'0';
-    cell.style.borderRight=bdr.r?'1.5px solid '+col.bd:'0';
+    cell.style.borderTop=bdr.t?'3px solid '+col.bd:'0';
+    cell.style.borderBottom=bdr.b?'3px solid '+col.bd:'0';
+    cell.style.borderLeft=bdr.l?'3px solid '+col.bd:'0';
+    cell.style.borderRight=bdr.r?'3px solid '+col.bd:'0';
     var isQueen=qQueens.some(function(q){return q[0]===r&&q[1]===c});
     var hasX=qMarks[r]&&qMarks[r][c];
     if(bdr.t||bdr.b||bdr.l||bdr.r)cell.classList.add('border-cell');
     if(isQueen)cell.classList.add('queen');
     else if(hasX)cell.classList.add('marked');
     (function(rr,cc,ridd){
-      cell.addEventListener('click',function(){if(!processingTouch)clickCell(rr,cc)});
+      cell.addEventListener('click',function(){if(!processingTouch&&!qMouse.suppressClick)clickCell(rr,cc)});
       cell.addEventListener('mouseenter',function(){highlightRegion(ridd)});
       cell.addEventListener('mouseleave',function(){clearHighlight()});
     })(r,c,rid);
