@@ -33,7 +33,7 @@ body{background:linear-gradient(180deg,#05020f 0%,#0d0620 10%,#1a0a3e 25%,#2d1b5
 .ctrl-btn svg{width:20px;height:20px;position:relative;z-index:1;filter:drop-shadow(0 1px 2px rgba(180,200,255,0.3))}
 .ctrl-btn.muted svg .strike-line{opacity:1}
 .ctrl-btn.muted svg .icon-path{opacity:0.35}
-#board-wrapper{position:relative;margin:2px 0;flex-shrink:0}
+#board-wrapper{flex:1;display:flex;align-items:center;justify-content:center;width:100%;overflow:hidden}
 #board{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;padding:5px;background:rgba(0,0,0,0.35);border-radius:12px;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.08)}
 .cell{width:clamp(36px,10.5vw,48px);height:clamp(36px,10.5vw,48px);background:rgba(255,255,255,0.04);border-radius:7px;transition:background 0.1s,transform 0.1s;position:relative;overflow:hidden}
 .cell.filled{box-shadow:inset 0 -3px 0 rgba(0,0,0,0.12),inset 0 2px 0 rgba(255,255,255,0.2),0 2px 6px rgba(0,0,0,0.2)}
@@ -1963,7 +1963,7 @@ if(game==='blast'){renderBoard();checkGameOver()}
 }
 
 /* === ONE LINE (BLOCK FILL) === */
-var olLevel=1,olBoard=[],olSize=4,olPath=[],olFilled=0,olTotal=0,olDragging=false,olStartR=0,olStartC=0,olObstacles=[],olObstacleMap=[],olManualSize=0;
+var olLevel=1,olBoard=[],olSize=4,olPath=[],olFilled=0,olTotal=0,olDragging=false,olStartR=0,olStartC=0,olObstacles=[],olObstacleMap=[],olManualSize=0,olCells=[];
 var OL_LEVELS=[4,4,5,5,5,6,6,6,4,4,5,5,6,6,4,5,6,4,5,6];
 function initOneLine(){olLevel=parseInt(localStorage.getItem('bb_ol_level')||'1',10);olManualSize=parseInt(localStorage.getItem('bb_ol_size')||'0',10);buildOneLine()}
 function buildOneLine(){
@@ -2019,17 +2019,25 @@ if(dfs(0,0,1))return path;
 return null;
 }
 function renderOneLine(){
-var board=document.getElementById('oneline-board');
-board.style.gridTemplateColumns='repeat('+olSize+',1fr)';board.innerHTML='';
-for(var r=0;r<olSize;r++){for(var c=0;c<olSize;c++){
-var cell=document.createElement('div');cell.className='ol-cell';
-if(olBoard[r][c]){cell.classList.add('filled');addCellStars(cell)}
-if(r===olStartR&&c===olStartC&&!olBoard[r][c])cell.classList.add('start');
-if(olObstacleMap[r][c])cell.classList.add('obstacle')
-cell.setAttribute('data-r',r);cell.setAttribute('data-c',c);
-board.appendChild(cell);
-}}
-if(olFilled===olTotal)document.getElementById('ol-game-over').classList.add('show');
+  var board=document.getElementById('oneline-board');
+  var recreate=olCells.length!==olSize||(olCells[0]&&olCells[0].length!==olSize);
+  if(recreate){
+    board.style.gridTemplateColumns='repeat('+olSize+',1fr)';board.innerHTML='';olCells=[];
+    for(var r=0;r<olSize;r++){olCells[r]=[];for(var c=0;c<olSize;c++){
+      var cell=document.createElement('div');cell.className='ol-cell';
+      cell.setAttribute('data-r',r);cell.setAttribute('data-c',c);
+      board.appendChild(cell);olCells[r][c]=cell;
+    }}
+  }
+  for(var r=0;r<olSize;r++){for(var c=0;c<olSize;c++){
+    var cell=olCells[r][c];if(!cell)continue;
+    var filled=!!olBoard[r][c],start=r===olStartR&&c===olStartC&&!olBoard[r][c],obs=!!olObstacleMap[r][c];
+    if(filled&&!cell.classList.contains('filled')){cell.classList.add('filled');addCellStars(cell)}
+    else if(!filled&&cell.classList.contains('filled')){cell.classList.remove('filled');var st=cell.querySelectorAll('.cell-star');for(var s=0;s<st.length;s++)st[s].remove()}
+    cell.classList.toggle('start',start);
+    cell.classList.toggle('obstacle',obs);
+  }}
+  if(olFilled===olTotal)document.getElementById('ol-game-over').classList.add('show');
 }
 function handleOneLineStart(e){
  var t=e.target;while(t&&!t.classList.contains('ol-cell'))t=t.parentElement;
@@ -2058,15 +2066,25 @@ function handleOneLineStart(e){
   renderOneLine();t.classList.add('current');
  }
 }
+function getOLCellFromPoint(cx,cy){
+  var board=document.getElementById('oneline-board');
+  var rect=board.getBoundingClientRect();
+  var style=window.getComputedStyle(board);
+  var gap=parseInt(style.gap)||3,pad=parseInt(style.padding)||6;
+  var cw=(rect.width-pad*2-gap*(olSize-1))/olSize;
+  var ch=(rect.height-pad*2-gap*(olSize-1))/olSize;
+  var col=Math.floor((cx-rect.left-pad+gap/2)/(cw+gap));
+  var row=Math.floor((cy-rect.top-pad+gap/2)/(ch+gap));
+  if(row<0||row>=olSize||col<0||col>=olSize)return null;
+  return{row:row,col:col};
+}
 function handleOneLineMove(e){
   if(!olDragging)return;e.preventDefault();
   var pt=e.touches?e.touches[0]:e;
-  var el=document.elementFromPoint(pt.clientX,pt.clientY);
-  if(!el)return;
-  while(el&&!el.classList.contains('ol-cell'))el=el.parentElement;
-  if(!el||el.classList.contains('obstacle'))return;
-  var r=parseInt(el.getAttribute('data-r')),c=parseInt(el.getAttribute('data-c'));
-  if(r<0||r>=olSize||c<0||c>=olSize)return;
+  var pos=getOLCellFromPoint(pt.clientX,pt.clientY);
+  if(!pos)return;
+  var r=pos.row,c=pos.col;
+  if(olObstacleMap[r][c])return;
   var last=olPath[olPath.length-1];
   if(r===last[0]&&c===last[1])return;
   if(Math.abs(r-last[0])+Math.abs(c-last[1])===1){
