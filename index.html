@@ -653,8 +653,8 @@ body.ui-light #oneline-board .ol-cell.filled{background:linear-gradient(135deg,r
 <div id="sapper-size-panel">
 <span class="ol-size-label">Сложность:</span>
 <button class="ol-size-btn" data-difficulty="easy">Лёгкий 8×8</button>
-<button class="ol-size-btn" data-difficulty="medium">Средний 10×10</button>
-<button class="ol-size-btn" data-difficulty="hard">Сложный 12×12</button>
+<button class="ol-size-btn" data-difficulty="medium">Средний 8×10</button>
+<button class="ol-size-btn" data-difficulty="hard">Сложный 8×12</button>
 </div>
 <div id="bottom-bar">
 <div class="bar-label" id="current-game-label">
@@ -2382,7 +2382,7 @@ function saveAllGameStates(){
    localStorage.setItem('bb_save_sapper',JSON.stringify({
     sapperBoard:sapperBoard,sapperMines:sapperMines,sapperRevealed:sapperRevealed,
     sapperFlagged:sapperFlagged,sapperGameOver:sapperGameOver,sapperFirstClick:sapperFirstClick,
-    sapperDifficulty:sapperDifficulty,sapperSize:sapperSize
+    sapperDifficulty:sapperDifficulty,sapperCols:sapperCols,sapperRows:sapperRows
    }));
   }
   if(window._flowInit){
@@ -3103,8 +3103,8 @@ document.getElementById('q-retry-btn').addEventListener('click',function(){
 document.getElementById('q-restart').addEventListener('click',function(){buildQueens()});
 
 /* === SAPPER (MINESWEEPER) === */
-var sapperBoard=[],sapperSize=8,sapperMines=10,sapperRevealed=[],sapperFlagged=[],sapperGameOver=false,sapperFirstClick=true,sapperFlagMode=false,sapperTimer=0,sapperTimerInterval=null,sapperCellsRevealed=0,sapperDifficulty='easy';
-var SAPPER_DIFFS={easy:{size:8,mines:10},medium:{size:10,mines:25},hard:{size:12,mines:45}};
+var sapperBoard=[],sapperCols=8,sapperRows=8,sapperMines=10,sapperRevealed=[],sapperFlagged=[],sapperGameOver=false,sapperFirstClick=true,sapperFlagMode=false,sapperTimer=0,sapperTimerInterval=null,sapperCellsRevealed=0,sapperDifficulty='easy';
+var SAPPER_DIFFS={easy:{cols:8,rows:8,mines:8},medium:{cols:8,rows:10,mines:18},hard:{cols:8,rows:12,mines:30}};
 
 function initSapper(){
  var saved=null;
@@ -3113,7 +3113,8 @@ function initSapper(){
   sapperBoard=saved.sapperBoard;sapperMines=saved.sapperMines;sapperRevealed=saved.sapperRevealed;
   sapperFlagged=saved.sapperFlagged;sapperGameOver=saved.sapperGameOver;
   sapperFirstClick=saved.sapperFirstClick;sapperDifficulty=saved.sapperDifficulty;
-  sapperSize=saved.sapperSize;sapperFlagMode=false;sapperTimer=0;sapperCellsRevealed=0;
+  sapperCols=saved.sapperCols;sapperRows=saved.sapperRows;
+  sapperFlagMode=false;sapperTimer=0;sapperCellsRevealed=0;
   if(sapperTimerInterval){clearInterval(sapperTimerInterval);sapperTimerInterval=null}
   document.getElementById('sapper-game-over').classList.remove('show');
   document.getElementById('sapper-win').classList.remove('show');
@@ -3124,12 +3125,12 @@ function initSapper(){
  }
  sapperDifficulty=localStorage.getItem('bb_sapper_diff')||'easy';
  var d=SAPPER_DIFFS[sapperDifficulty];
- sapperSize=d.size;sapperMines=d.mines;
+ sapperCols=d.cols;sapperRows=d.rows;sapperMines=d.mines;
  buildSapperBoard();
 }
 function buildSapperBoard(){
  var d=SAPPER_DIFFS[sapperDifficulty];
- sapperSize=d.size;sapperMines=d.mines;
+ sapperCols=d.cols;sapperRows=d.rows;sapperMines=d.mines;
  sapperBoard=[];sapperRevealed=[];sapperFlagged=[];sapperGameOver=false;sapperFirstClick=true;sapperCellsRevealed=0;
  sapperFlagMode=false;
  var flagBtn=document.getElementById('sapper-flag-btn');
@@ -3138,8 +3139,8 @@ function buildSapperBoard(){
  sapperTimer=0;
  document.getElementById('sapper-game-over').classList.remove('show');
  document.getElementById('sapper-win').classList.remove('show');
- for(var r=0;r<sapperSize;r++){sapperBoard[r]=[];sapperRevealed[r]=[];sapperFlagged[r]=[];
-  for(var c=0;c<sapperSize;c++){sapperBoard[r][c]=0;sapperRevealed[r][c]=false;sapperFlagged[r][c]=false}}
+ for(var r=0;r<sapperRows;r++){sapperBoard[r]=[];sapperRevealed[r]=[];sapperFlagged[r]=[];
+  for(var c=0;c<sapperCols;c++){sapperBoard[r][c]=0;sapperRevealed[r][c]=false;sapperFlagged[r][c]=false}}
  document.getElementById('sapper-mine-count').textContent=sapperMines;
  document.getElementById('sapper-timer').textContent='0';
  renderSapperBoard();
@@ -3147,17 +3148,17 @@ function buildSapperBoard(){
 function placeSapperMines(safeR,safeC){
  var placed=0;
  while(placed<sapperMines){
-  var r=Math.floor(Math.random()*sapperSize),c=Math.floor(Math.random()*sapperSize);
+  var r=Math.floor(Math.random()*sapperRows),c=Math.floor(Math.random()*sapperCols);
   if(sapperBoard[r][c]===-1)continue;
   if(Math.abs(r-safeR)<=1&&Math.abs(c-safeC)<=1)continue;
   sapperBoard[r][c]=-1;placed++;
  }
- for(var r=0;r<sapperSize;r++)for(var c=0;c<sapperSize;c++){
+ for(var r=0;r<sapperRows;r++)for(var c=0;c<sapperCols;c++){
   if(sapperBoard[r][c]===-1)continue;
   var cnt=0;
   for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){
    var nr=r+dr,nc=c+dc;
-   if(nr>=0&&nr<sapperSize&&nc>=0&&nc<sapperSize&&sapperBoard[nr][nc]===-1)cnt++;
+   if(nr>=0&&nr<sapperRows&&nc>=0&&nc<sapperCols&&sapperBoard[nr][nc]===-1)cnt++;
   }
   sapperBoard[r][c]=cnt;
  }
@@ -3168,11 +3169,15 @@ function renderSapperBoard(){
  var availWidth=wrap.clientWidth||400;
  var isMobile=window.innerWidth<480;
  var minCell=isMobile?22:28,maxCell=isMobile?36:44;
- var visCols=sapperSize;
- var cellS=Math.min(maxCell,Math.max(minCell,Math.floor((availWidth-(visCols-1))/visCols)));
+ function calcCellSize(cols,rows,avail,min,max){
+  var cw=Math.floor((avail-1)/cols);
+  var ch=Math.floor((window.innerHeight*0.55-1)/rows);
+  return Math.max(min,Math.min(max,Math.min(cw,ch)));
+ }
+ var cellS=calcCellSize(sapperCols,sapperRows,availWidth,minCell,maxCell);
  el.style.setProperty('--sp-cell-size',cellS+'px');
- el.style.gridTemplateColumns='repeat('+visCols+',1fr)';el.innerHTML='';
- for(var r=0;r<sapperSize;r++)for(var c=0;c<sapperSize;c++){
+ el.style.gridTemplateColumns='repeat('+sapperCols+',1fr)';el.innerHTML='';
+ for(var r=0;r<sapperRows;r++)for(var c=0;c<sapperCols;c++){
   var cell=document.createElement('div');cell.className='sp-cell';
   cell.setAttribute('data-sr',r);cell.setAttribute('data-sc',c);
   if(sapperRevealed[r][c]){
@@ -3188,7 +3193,7 @@ function renderSapperBoard(){
 }
 function sapperFlaggedCount(){
  var cnt=0;
- for(var r=0;r<sapperSize;r++)for(var c=0;c<sapperSize;c++)if(sapperFlagged[r][c])cnt++;
+ for(var r=0;r<sapperRows;r++)for(var c=0;c<sapperCols;c++)if(sapperFlagged[r][c])cnt++;
  return cnt;
 }
 function handleSapperClick(e){
@@ -3231,14 +3236,14 @@ function handleSapperRightClick(e){
  if(checkSapperWin())endSapperGame(true);
 }
 function revealSapperCell(r,c){
- if(r<0||r>=sapperSize||c<0||c>=sapperSize||sapperRevealed[r][c]||sapperFlagged[r][c])return;
+ if(r<0||r>=sapperRows||c<0||c>=sapperCols||sapperRevealed[r][c]||sapperFlagged[r][c])return;
  sapperRevealed[r][c]=true;sapperCellsRevealed++;
  if(sapperBoard[r][c]===0){
   for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++)revealSapperCell(r+dr,c+dc);
  }
 }
 function checkSapperWin(){
- var totalSafe=sapperSize*sapperSize-sapperMines;
+ var totalSafe=sapperRows*sapperCols-sapperMines;
  return sapperCellsRevealed===totalSafe;
 }
 function endSapperGame(won,mineR,mineC){
@@ -3248,12 +3253,11 @@ function endSapperGame(won,mineR,mineC){
   document.getElementById('sapper-win-time').textContent='Время: '+sapperTimer+'с';
   document.getElementById('sapper-win').classList.add('show');
  }else{
-  for(var r=0;r<sapperSize;r++)for(var c=0;c<sapperSize;c++){
+  for(var r=0;r<sapperRows;r++)for(var c=0;c<sapperCols;c++){
    if(sapperBoard[r][c]===-1&&!sapperFlagged[r][c])sapperRevealed[r][c]=true;
    if(sapperFlagged[r][c]&&sapperBoard[r][c]!==-1)sapperRevealed[r][c]=true;
   }
   renderSapperBoard();
-  // Mark the clicked mine as exploded
   if(mineR!==undefined&&mineC!==undefined){
    var exCell=document.querySelector('.sp-cell[data-sr="'+mineR+'"][data-sc="'+mineC+'"]');
    if(exCell)exCell.classList.add('mine-exploded');
