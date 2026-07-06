@@ -2624,17 +2624,17 @@ document.getElementById('ol-size-panel').addEventListener('click',function(e){
 });
 
 /* === 2048 === */
-var g2048Board=[],g2048Score=0,g2048Best=0,g2048Size=4,g2048Moved=false,g2048PrevBoard=null;
+var g2048Board=[],g2048Score=0,g2048Best=0,g2048Size=4,g2048Moved=false,g2048PrevBoard=null,g2048WinShown=false;
 try{g2048Best=parseInt(localStorage.getItem('bb_2048_best')||'0',10)}catch(e){}
 function init2048(){
  var saved=null;
  try{saved=JSON.parse(localStorage.getItem('bb_save_2048'));localStorage.removeItem('bb_save_2048')}catch(e){}
  if(saved){
-  g2048Board=saved.g2048Board;g2048Score=saved.g2048Score;g2048Best=saved.g2048Best;g2048Size=saved.g2048Size;
+   g2048Board=saved.g2048Board;g2048Score=saved.g2048Score;g2048Best=saved.g2048Best;g2048Size=saved.g2048Size;g2048WinShown=false;
   render2048();return;
  }
  g2048Size=parseInt(localStorage.getItem('bb_2048_size')||'4',10);
- g2048Board=[];g2048Score=0;
+  g2048Board=[];g2048Score=0;g2048WinShown=false;
  for(var r=0;r<g2048Size;r++){g2048Board[r]=[];for(var c=0;c<g2048Size;c++)g2048Board[r][c]=0}
  add2048Tile();add2048Tile();render2048();
  }
@@ -2665,7 +2665,7 @@ document.getElementById('g2048-best-header').textContent=g2048Best;
 document.getElementById('g2048-game-over').classList.remove('show');
 g2048PrevBoard=null;
 g2048UpdateSizeButtons();
-if(max>=2048)showToast('✨ 2048! Победа!');
+if(max>=2048&&!g2048WinShown){g2048WinShown=true;showToast('✨ 2048! Победа!')}
 }
 function get2048Color(v){
 var lightColors={2:'rgba(200,180,220,0.5)',4:'rgba(180,160,210,0.55)',8:'rgba(200,140,180,0.6)',16:'rgba(220,120,160,0.65)',
@@ -3289,7 +3289,7 @@ document.getElementById('sapper-board').addEventListener('contextmenu',handleSap
    }
    spTouchTimer=null;
   },400);
- },{passive:true});
+},{passive:false});
  document.getElementById('sapper-board').addEventListener('touchmove',function(){spTouchMoved=true;if(spTouchTimer){clearTimeout(spTouchTimer);spTouchTimer=null}},{passive:true});
  document.getElementById('sapper-board').addEventListener('touchend',function(){
   if(spTouchTimer){clearTimeout(spTouchTimer);spTouchTimer=null}
@@ -3377,17 +3377,20 @@ function generateFlowPuzzle(size){
    else{for(var c=size-1;c>=0;c--)hPath.push([r,c])}
   }
  }
- var segLen=Math.floor(hPath.length/numPairs);
- var solution=[];
- for(var p=0;p<numPairs;p++){
-  var si=p*segLen,ei=(p===numPairs-1)?hPath.length-1:(p+1)*segLen-1;
-  var seg=hPath.slice(si,ei+1);
-  if(seg.length<2&&solution.length>0){
-   solution[solution.length-1].path=solution[solution.length-1].path.concat(seg);
-   continue;
+  var gap=hPath.length>=numPairs*2+(numPairs-1)?1:0;
+  var usable=hPath.length-gap*(numPairs-1);
+  var segLen=Math.floor(usable/numPairs);
+  var solution=[];
+  for(var p=0;p<numPairs;p++){
+   var si=p*(segLen+gap);
+   var ei=(p===numPairs-1)?hPath.length-1:si+segLen-1;
+   var seg=hPath.slice(si,ei+1);
+   if(seg.length<2&&solution.length>0){
+    solution[solution.length-1].path=solution[solution.length-1].path.concat(seg);
+    continue;
+   }
+   solution.push({color:FLOW_COLORS[p%FLOW_COLORS.length],start:seg[0],end:seg[seg.length-1],path:seg});
   }
-  solution.push({color:FLOW_COLORS[p%FLOW_COLORS.length],start:seg[0],end:seg[seg.length-1],path:seg});
- }
  flowSolution=solution;
  flowColors=[];
  for(var j=0;j<solution.length;j++)flowColors.push(solution[j].color);
@@ -3402,7 +3405,7 @@ function generateFlowPuzzle(size){
 function renderFlowBoard(){
  var board=document.getElementById('flow-board');
  board.style.gridTemplateColumns='repeat('+flowSize+',1fr)';board.innerHTML='';
- board.style.position='relative';
+ board.style.position='relative';board.style.touchAction='none';
  for(var r=0;r<flowSize;r++)for(var c=0;c<flowSize;c++){
   var cell=document.createElement('div');cell.className='fl-cell';
   cell.setAttribute('data-fr',r);cell.setAttribute('data-fc',c);
@@ -3534,6 +3537,45 @@ function flowCellFromPoint(clientX,clientY){
  return {r:row,c:col};
 }
 
+function flowPaintCell(r,c){
+ var cell=document.querySelector('.fl-cell[data-fr="'+r+'"][data-fc="'+c+'"]');
+ if(cell){cell.style.background=flowColors[flowActiveColor];cell.style.boxShadow=''}
+}
+function flowUnpaintCell(r,c){
+ var cell=document.querySelector('.fl-cell[data-fr="'+r+'"][data-fc="'+c+'"]');
+ if(!cell)return;
+ cell.style.background='';
+ var isDot=false;
+ for(var i=0;i<flowDots.length;i++)if(flowDots[i].r===r&&flowDots[i].c===c){isDot=true;break}
+ if(isDot){
+  for(var d=0;d<flowDots.length;d++){
+   if(flowDots[d].r===r&&flowDots[d].c===c){
+    cell.style.boxShadow='inset 0 0 12px '+flowColors[flowDots[d].color]+',inset 0 0 20px '+flowColors[flowDots[d].color];
+    break;
+   }
+  }
+ }else{
+  cell.style.boxShadow='';
+ }
+}
+function flowUpdateSvgLine(){
+ var svg=document.querySelector('#flow-board .flow-preview-svg');
+ if(!svg)return;
+ svg.innerHTML='';
+ if(flowDrawPath.length<2)return;
+ var points='';
+ for(var k=0;k<flowDrawPath.length;k++)points+=(flowDrawPath[k][1]+0.5)+','+(flowDrawPath[k][0]+0.5)+' ';
+ var polyline=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+ polyline.setAttribute('points',points.trim());
+ polyline.setAttribute('stroke',flowColors[flowActiveColor]);
+ polyline.setAttribute('stroke-width','0.4');
+ polyline.setAttribute('stroke-linecap','round');
+ polyline.setAttribute('stroke-linejoin','round');
+ polyline.setAttribute('fill','none');
+ polyline.setAttribute('opacity','0.7');
+ svg.appendChild(polyline);
+}
+
 // Shared move handler for both mouse and touch
 function flowHandleMove(r,c){
  if(!flowDrawing)return;
@@ -3547,15 +3589,15 @@ function flowHandleMove(r,c){
  }
  // Check other dots
  for(var i=0;i<flowDots.length;i++)if(flowDots[i].r===r&&flowDots[i].c===c&&flowDots[i].color!==flowActiveColor)return;
- // Check if this cell is already in our current draw path -> backward drag like OneLine
+ // Backward drag
  var idx=-1;
  for(var k=0;k<flowDrawPath.length;k++){if(flowDrawPath[k][0]===r&&flowDrawPath[k][1]===c){idx=k;break}}
  if(idx>=0){
   if(idx===flowDrawPath.length-2){
-   flowDrawPath.pop();renderFlowBoard();flowHighlightDrawPath();return;
+   var rem=flowDrawPath.pop();flowUnpaintCell(rem[0],rem[1]);flowUpdateSvgLine();return;
   }else if(idx<flowDrawPath.length-2){
-   while(flowDrawPath.length>idx+1){flowDrawPath.pop()}
-   renderFlowBoard();flowHighlightDrawPath();return;
+   while(flowDrawPath.length>idx+1){var rem=flowDrawPath.pop();flowUnpaintCell(rem[0],rem[1])}
+   flowUpdateSvgLine();return;
   }
  }
  // Check if reached target dot
@@ -3573,29 +3615,8 @@ function flowHandleMove(r,c){
   }
  }
  flowDrawPath.push([r,c]);
- renderFlowBoard();
- flowHighlightDrawPath();
-}
-function flowHighlightDrawPath(){
- for(var k=0;k<flowDrawPath.length;k++){
-  var cell=document.querySelector('.fl-cell[data-fr="'+flowDrawPath[k][0]+'"][data-fc="'+flowDrawPath[k][1]+'"]');
-  if(cell)cell.style.background=flowColors[flowActiveColor];
- }
- var svg=document.querySelector('#flow-board .flow-preview-svg');
- if(!svg)return;
- svg.innerHTML='';
- if(flowDrawPath.length<2)return;
- var points='';
- for(var k=0;k<flowDrawPath.length;k++)points+=(flowDrawPath[k][1]+0.5)+','+(flowDrawPath[k][0]+0.5)+' ';
- var polyline=document.createElementNS('http://www.w3.org/2000/svg','polyline');
- polyline.setAttribute('points',points.trim());
- polyline.setAttribute('stroke',flowColors[flowActiveColor]);
- polyline.setAttribute('stroke-width','0.4');
- polyline.setAttribute('stroke-linecap','round');
- polyline.setAttribute('stroke-linejoin','round');
- polyline.setAttribute('fill','none');
- polyline.setAttribute('opacity','0.7');
- svg.appendChild(polyline);
+ flowPaintCell(r,c);
+ flowUpdateSvgLine();
 }
 
 function flowGetCellFromEvent(e){
@@ -3648,6 +3669,7 @@ document.getElementById('flow-board').addEventListener('mouseleave',function(e){
 
 // Touch handlers
 document.getElementById('flow-board').addEventListener('touchstart',function(e){
+ e.preventDefault();
  if(flowDrawing){flowCancelDraw();return}
  var info=flowGetCellFromEvent(e);
  if(!info)return;
@@ -3670,7 +3692,7 @@ document.getElementById('flow-board').addEventListener('touchstart',function(e){
   var ep=existing[existing.length-1];
   if(ep[0]===r&&ep[1]===c){flowStartDraw(col);flowDrawPath=[[r,c]];}
  }
-},{passive:true});
+},{passive:false});
 document.addEventListener('touchmove',function(e){
  if(!flowDrawing)return;
  e.preventDefault();
