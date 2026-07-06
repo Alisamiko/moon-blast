@@ -349,22 +349,22 @@ body.ui-light #oneline-board .ol-cell.filled{background:linear-gradient(135deg,r
 #flow-board{display:grid;gap:2px;padding:5px;background:var(--bg-board);border-radius:12px;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);box-shadow:0 8px 32px rgba(0,0,0,0.3);touch-action:manipulation;transition:background 0.35s ease}
 #flow-board .fl-cell{width:var(--board-cell-size,clamp(36px,10vw,48px));height:var(--board-cell-size,clamp(36px,10vw,48px));border-radius:6px;background:var(--bg-cell);transition:background 0.1s,transform 0.1s;position:relative;cursor:pointer;touch-action:manipulation}
 #flow-board .fl-cell:active{transform:scale(0.93)}
-#flow-board .fl-cell.path-0{background:#e74c3c}
-#flow-board .fl-cell.path-1{background:#2ecc71}
-#flow-board .fl-cell.path-2{background:#3498db}
-#flow-board .fl-cell.path-3{background:#f39c12}
-#flow-board .fl-cell.path-4{background:#9b59b6}
-#flow-board .fl-cell.path-5{background:#1abc9c}
-#flow-board .fl-cell.path-6{background:#e91e63}
-#flow-board .fl-cell.path-7{background:#00bcd4}
-#flow-board .fl-cell.path-8{background:#ff6b6b}
-#flow-board .fl-cell.path-9{background:#ffa502}
-#flow-board .fl-cell.path-10{background:#2ed573}
-#flow-board .fl-cell.path-11{background:#1e90ff}
-#flow-board .fl-cell.path-12{background:#ff4757}
-#flow-board .fl-cell.path-13{background:#5352ed}
-#flow-board .fl-cell.path-14{background:#70a1ff}
-#flow-board .fl-cell.path-15{background:#ff6348}
+#flow-board .fl-cell.path-0{background:rgba(220,140,140,0.7)}
+#flow-board .fl-cell.path-1{background:rgba(140,200,140,0.7)}
+#flow-board .fl-cell.path-2{background:rgba(140,160,220,0.7)}
+#flow-board .fl-cell.path-3{background:rgba(220,180,120,0.7)}
+#flow-board .fl-cell.path-4{background:rgba(180,140,220,0.7)}
+#flow-board .fl-cell.path-5{background:rgba(140,200,190,0.7)}
+#flow-board .fl-cell.path-6{background:rgba(220,140,180,0.7)}
+#flow-board .fl-cell.path-7{background:rgba(140,190,220,0.7)}
+#flow-board .fl-cell.path-8{background:rgba(220,160,140,0.7)}
+#flow-board .fl-cell.path-9{background:rgba(200,180,120,0.7)}
+#flow-board .fl-cell.path-10{background:rgba(140,210,160,0.7)}
+#flow-board .fl-cell.path-11{background:rgba(160,140,220,0.7)}
+#flow-board .fl-cell.path-12{background:rgba(220,140,160,0.7)}
+#flow-board .fl-cell.path-13{background:rgba(140,180,210,0.7)}
+#flow-board .fl-cell.path-14{background:rgba(180,200,140,0.7)}
+#flow-board .fl-cell.path-15{background:rgba(200,160,200,0.7)}
 #flow-board .fl-cell.start::after,#flow-board .fl-cell.end::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;height:60%;border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(255,255,255,0.3),transparent 60%)}
 </style>
 </head>
@@ -3322,7 +3322,7 @@ buildSapperBoard=function(){
 /* === COLOR CONNECT (FLOW) === */
 var flowLevel=1,flowBoard=[],flowSize=6,flowSolution=[],flowColors=[],flowDots=[],flowDrawnPaths=[],flowDrawing=false,flowActiveColor=-1,flowDrawPath=[];
 var FLOW_SIZES=[6,6,7,7,8,8,6,7,8,6,7,8,6,7,8];
-var FLOW_COLORS=['#e74c3c','#2ecc71','#3498db','#f39c12','#9b59b6','#1abc9c','#e91e63','#00bcd4','#ff6b6b','#ffa502','#2ed573','#1e90ff','#ff4757','#5352ed','#70a1ff','#ff6348'];
+var FLOW_COLORS=['rgba(220,140,140,0.7)','rgba(140,200,140,0.7)','rgba(140,160,220,0.7)','rgba(220,180,120,0.7)','rgba(180,140,220,0.7)','rgba(140,200,190,0.7)','rgba(220,140,180,0.7)','rgba(140,190,220,0.7)','rgba(220,160,140,0.7)','rgba(200,180,120,0.7)','rgba(140,210,160,0.7)','rgba(160,140,220,0.7)','rgba(220,140,160,0.7)','rgba(140,180,210,0.7)','rgba(180,200,140,0.7)','rgba(200,160,200,0.7)'];
 
 function initFlow(){
  var saved=null;
@@ -3368,29 +3368,35 @@ function generateFlowPuzzle(size){
    }
    if(!found){path.pop();visited[r][c]=false}
   })(sr,sc);
-  if(found){hPath=path;break}
+  if(found){
+   var segLen=Math.floor(path.length/numPairs);
+   var sol=[];var okDots=true;
+   for(var p=0;p<numPairs;p++){
+    var si=p*segLen,ei=(p===numPairs-1)?path.length-1:(p+1)*segLen-1;
+    var seg=path.slice(si,ei+1);
+    if(seg.length<2&&sol.length>0){sol[sol.length-1].path=sol[sol.length-1].path.concat(seg);continue}
+    sol.push({color:FLOW_COLORS[p%FLOW_COLORS.length],start:seg[0],end:seg[seg.length-1],path:seg});
+   }
+   var dts=[];
+   for(var j=0;j<sol.length;j++){dts.push(sol[j].start);dts.push(sol[j].end)}
+   for(var i=0;i<dts.length&&okDots;i++)for(var j=i+1;j<dts.length&&okDots;j++){
+    if(Math.abs(dts[i][0]-dts[j][0])+Math.abs(dts[i][1]-dts[j][1])<=1)okDots=false;
+   }
+   if(okDots){hPath=path;break}
+  }
  }
  if(!hPath){
-  hPath=[];
-  for(var r=0;r<size;r++){
-   if(r%2===0){for(var c=0;c<size;c++)hPath.push([r,c])}
-   else{for(var c=size-1;c>=0;c--)hPath.push([r,c])}
-  }
+  hPath=[];var segLen=Math.floor(totalCells/numPairs);
+  for(var r=0;r<size;r++){if(r%2===0){for(var c=0;c<size;c++)hPath.push([r,c])}else{for(var c=size-1;c>=0;c--)hPath.push([r,c])}}
  }
-  var gap=hPath.length>=numPairs*2+(numPairs-1)?1:0;
-  var usable=hPath.length-gap*(numPairs-1);
-  var segLen=Math.floor(usable/numPairs);
-  var solution=[];
-  for(var p=0;p<numPairs;p++){
-   var si=p*(segLen+gap);
-   var ei=(p===numPairs-1)?hPath.length-1:si+segLen-1;
-   var seg=hPath.slice(si,ei+1);
-   if(seg.length<2&&solution.length>0){
-    solution[solution.length-1].path=solution[solution.length-1].path.concat(seg);
-    continue;
-   }
-   solution.push({color:FLOW_COLORS[p%FLOW_COLORS.length],start:seg[0],end:seg[seg.length-1],path:seg});
-  }
+ var segLen=Math.floor(hPath.length/numPairs);
+ var solution=[];
+ for(var p=0;p<numPairs;p++){
+  var si=p*segLen,ei=(p===numPairs-1)?hPath.length-1:(p+1)*segLen-1;
+  var seg=hPath.slice(si,ei+1);
+  if(seg.length<2&&solution.length>0){solution[solution.length-1].path=solution[solution.length-1].path.concat(seg);continue}
+  solution.push({color:FLOW_COLORS[p%FLOW_COLORS.length],start:seg[0],end:seg[seg.length-1],path:seg});
+ }
  flowSolution=solution;
  flowColors=[];
  for(var j=0;j<solution.length;j++)flowColors.push(solution[j].color);
@@ -3572,7 +3578,7 @@ function flowUpdateSvgLine(){
  polyline.setAttribute('stroke-linecap','round');
  polyline.setAttribute('stroke-linejoin','round');
  polyline.setAttribute('fill','none');
- polyline.setAttribute('opacity','0.7');
+ polyline.setAttribute('opacity','0.85');
  svg.appendChild(polyline);
 }
 
