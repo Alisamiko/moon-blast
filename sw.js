@@ -1,4 +1,4 @@
-var CACHE_NAME = 'moonblast-v3';
+var CACHE_NAME = 'moonblast-v4';
 var CACHE_URLS = [
   '.',
   'index.html',
